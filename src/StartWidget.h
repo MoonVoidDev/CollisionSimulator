@@ -1,12 +1,30 @@
 #pragma once
 
-#include <QWidget>
+#include "MyGraphicsScene.h"
+#include "MyGraphicsView.h"
 
-class StartWidget : public QWidget
-{
-  Q_OBJECT
+#include <QWidget>
+#include <QGraphicsView>
+#include <QGraphicsScene>
+
+class StartWidget : public QWidget {
+    Q_OBJECT
 
 public:
-  StartWidget(QWidget *parent = nullptr);
-  ~StartWidget();
+    // Public functions
+    StartWidget(QWidget* parent = nullptr);
+    ~StartWidget();
+
+protected:
+    // Events handlers
+
+
+private slots:
+    // Slots
+
+private:
+    // Member variables
+    MyGraphicsView* view;
+    MyGraphicsScene* scene;
+
 };

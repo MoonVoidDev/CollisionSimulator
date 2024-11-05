@@ -18,6 +18,9 @@ set(PROJECT_SOURCES
 		./src/main.cpp
 		./src/StartWidget.cpp
 		./src/StartWidget.h
+		./src/MyGraphicsView.h
+		./src/MyGraphicsScene.h
+		./src/MyCollisionBall.h
 )
 
 if(${QT_VERSION_MAJOR} GREATER_EQUAL 6)
