@@ -19,7 +19,6 @@ set(PROJECT_SOURCES
 		./src/StartWidget.cpp
 		./src/StartWidget.h
 		./src/MyGraphicsView.h
-		./src/MyGraphicsScene.h
 		./src/MyCollisionBall.h
 )
 

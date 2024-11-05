@@ -1,4 +1,8 @@
+#pragma once
+
 #include <QGraphicsEllipseItem>
+#include <QPainter>
+#include <QGraphicsSceneMouseEvent>
 
 #include <Eigen/Dense>
 
@@ -6,48 +10,111 @@ constexpr double MASS = 1.0;
 
 class MyCollisionBall : public QGraphicsEllipseItem {
 
-public:
-    MyCollisionBall(double x, double y, double r);
-    ~MyCollisionBall();
-
-    inline void setVelo(const Eigen::Vector2d& velo) {
-        this->veloV = velo;
-    }
-    inline void setPos(const Eigen::Vector2d& pos) {
-        this->posV = pos;
-    }
-    inline void setMass(double mass) {
-        this->mass = mass;
-    }
-
-    // first invoke this
-    inline friend bool checkCollision(const MyCollisionBall& a, const MyCollisionBall& b) {
-        const Eigen::Vector2d disV = b.posV - a.posV;
-        if (disV.norm() <= b.radius + a.radius) {
-            Eigen::Vector2d n{ disV / disV.norm() };
-            Eigen::Vector2d an_newVelo{};
-            // todo
-
-        }
-    }
-
-    // second invoke this
-    inline bool checkBoarder();  // todo
-
-    // last invoke this
-    inline void updatePosByVelo(); // todo
-
-protected:
-
-
-private slots:
-
-
-
 private:
     double mass;
     double radius;
     Eigen::Vector2d veloV;
     Eigen::Vector2d posV;
+    bool isMouse;
+
+
+public:
+    MyCollisionBall(double x, double y, double r) :
+        QGraphicsEllipseItem{},
+        mass{ MASS },
+        radius{ r },
+        veloV{ 0,0 },
+        posV{ x, y },
+        isMouse{ false } {
+        this->setRect(-r, -r, 2 * r, 2 * r);
+        this->setPos(x, y);
+    };
+    ~MyCollisionBall();
+
+    inline void setVeloV(const Eigen::Vector2d& velo) {
+        this->veloV = velo;
+    }
+    inline void setPosV(const Eigen::Vector2d& pos) {
+        this->posV = pos;
+        this->setPos(pos[0], pos[1]);
+    }
+    inline void setMass(double mass) {
+        this->mass = mass;
+    }
+    inline void setIsMouse(bool status) {
+        this->isMouse = status;
+    }
+
+    void paint(QPainter* painter, const QStyleOptionGraphicsItem* option, QWidget* widget) override {
+        QPen outline{};
+        QBrush inside{};
+        outline.setWidth(2);
+        inside.setStyle(Qt::BrushStyle::SolidPattern);
+        if (isMouse) {
+            // my mouse
+            outline.setColor(QColor::fromRgb(234, 64, 64));
+            inside.setColor(QColor::fromRgb(238, 0, 0));
+        }
+        else {
+            outline.setColor(QColor::fromRgb(198, 232, 249));
+            inside.setColor(QColor::fromRgb(102, 204, 255));
+        }
+        painter->setPen(outline);
+        painter->setBrush(inside);
+        painter->drawEllipse(this->rect());
+    }
+
+    // first invoke this
+    inline friend bool processCollision(MyCollisionBall& a, MyCollisionBall& b) {
+        const Eigen::Vector2d disV = a.posV - b.posV;
+        if (disV.norm() <= a.radius + b.radius) {
+            Eigen::Vector2d n{ disV / disV.norm() };
+            double relV{ (a.veloV - b.veloV).dot(n) };
+            if (relV >= 0) return false;
+            double massSum{ a.mass + b.mass };
+            Eigen::Vector2d aNewVeloV{
+                a.veloV - ((2 * b.mass) / massSum * relV * n)
+            };
+            Eigen::Vector2d bNewVeloV{
+                b.veloV + ((2 * a.mass) / massSum * relV * n)
+            };
+
+            a.veloV = aNewVeloV;
+            b.veloV = bNewVeloV;
+            return true;
+        }
+        return false;
+    }
+
+    // second invoke this
+    inline bool processBorderCollision(int limitX, int limitY) {
+        if (this->posV[0] <= radius || this->posV[0] >= limitX - radius) {
+            // left and right 
+            Eigen::Vector2d axis{ 1, 0 };
+            this->veloV = this->veloV - 2 * (this->veloV.dot(axis)) * axis;
+            return true;
+        }
+        else if (this->posV[1] <= radius || this->posV[1] >= limitY - radius) {
+            // up and down
+            Eigen::Vector2d axis{ 0, 1 };
+            this->veloV = this->veloV - 2 * (this->veloV.dot(axis)) * axis;
+            return true;
+        }
+        return false;
+    }
+
+    // last invoke this
+    inline void updatePosByVelo(int msec) {
+        this->posV += msec * this->veloV;
+        this->setPos(this->posV[0], this->posV[1]);
+    }
+
+protected:
+
+
+
+private slots:
+
+
 
 };

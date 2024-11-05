@@ -1,7 +1,7 @@
 #pragma once
 
-#include "MyGraphicsScene.h"
 #include "MyGraphicsView.h"
+#include "MyCollisionBall.h"
 
 #include <QWidget>
 #include <QGraphicsView>
@@ -20,11 +20,11 @@ protected:
 
 
 private slots:
-    // Slots
+
 
 private:
     // Member variables
     MyGraphicsView* view;
-    MyGraphicsScene* scene;
+    QGraphicsScene* scene;
 
 };
