@@ -94,16 +94,16 @@ StartWidget::StartWidget(QWidget* parent)
 
     // Final init
     massSld->setMinimum(1);
-    massSld->setMaximum(10);
+    massSld->setMaximum(25);
     this->view->setNewBallMass(1);
     veloX->setMinimum(0);
-    veloX->setMaximum(1500);
+    veloX->setMaximum(3000);
     this->view->setNewBallVeloX(0);
     veloY->setMinimum(0);
-    veloY->setMaximum(1500);
+    veloY->setMaximum(3000);
     this->view->setNewBallVeloY(0);
     radiusSld->setMinimum(10);
-    radiusSld->setMaximum(50);
+    radiusSld->setMaximum(200);
     this->view->setNewBallRadius(10);
     massDisplay->setText(QString::number(massSld->value()));
     veloXDisplay->setText(QString::number(veloX->value()));
@@ -154,6 +154,8 @@ StartWidget::StartWidget(QWidget* parent)
             this->view->setMouseAddBall(checked);
         }
     );
+
+    this->view->initMouseBall();
 
 }
 

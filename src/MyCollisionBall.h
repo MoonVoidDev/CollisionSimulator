@@ -17,13 +17,15 @@ private:
     Eigen::Vector2d posV{};
     bool isMouse{};
 
+    int poolIndex{};  // deprecated
+
 
 public:
     MyCollisionBall(double x, double y, double r) :
         QGraphicsEllipseItem{},
         mass{ MASS },
         radius{ r },
-        veloV{ 0,0 },
+        veloV{ 0, 0 },
         posV{ x, y },
         isMouse{ false } {
         this->setRect(-r, -r, 2 * r, 2 * r);
@@ -37,10 +39,15 @@ public:
         this->setPos(x, y);
     }
     void setMass(double mass) { this->mass = mass; }
+    void setRadius(double radius) { this->radius = radius; }
     void setIsMouse(bool status) { this->isMouse = status; }
+    inline void setPoolIndex(int i) { this->poolIndex = i; }
 
     inline double getRadius() { return this->radius; }
     inline bool getIsMouse() { return this->isMouse; }
+    inline int getPoolIndex() { return this->poolIndex; }
+    inline double getX() { return this->posV[0]; }
+    inline double getY() { return this->posV[1]; }
 
     void paint(QPainter* painter, const QStyleOptionGraphicsItem* option, QWidget* widget) override {
         QPen outline{};

@@ -13,6 +13,104 @@
 
 #include <vector>
 
+
+
+
+constexpr static int MAX_MANAGE = 10;
+constexpr static int MAX_DEPTH = 6;
+
+// constexpr static int MAX_NODECNT = 1 * (1 - std::pow(4, MAX_DEPTH)) / (1 - 4);
+// constexpr static int MAX_LEAFCNT = std::pow(4, MAX_DEPTH - 1);
+// constexpr static int MAX_NODEPOOL = MAX_NODECNT;
+// constexpr static int MAX_LEAFPOOL = MAX_LEAFCNT;
+
+struct QuadtreeNode {
+    double x{}, y{}, w{}, h{};
+    QuadtreeNode* s[4]{};
+    int depth{ 1 };
+    std::vector<MyCollisionBall*> manage{};
+    QuadtreeNode(double _x, double _y, double _w, double _h, int _depth) :
+        x{ _x },
+        y{ _y },
+        w{ _w },
+        h{ _h },
+        depth{ _depth } {
+    }
+    ~QuadtreeNode() = default;
+
+    void divide() {
+        double neww{ w / 2 }, newh{ h / 2 };
+        s[0] = new QuadtreeNode{
+            x + neww, y, neww, newh, depth + 1
+        };
+        s[1] = new QuadtreeNode{
+            x, y, neww, newh, depth + 1
+        };
+        s[2] = new QuadtreeNode{
+            x, y + newh, neww, newh, depth + 1
+        };
+        s[3] = new QuadtreeNode{
+            x + neww, y + newh, neww, newh, depth + 1
+        };
+    }
+
+    void clear() {
+        manage.clear();
+        for (int i = 0; i < 4; i++) {
+            if (s[i]) {
+                s[i]->clear();
+                delete s[i];
+                s[i] = nullptr;
+            }
+        }
+    }
+
+    int getManagerIndex(MyCollisionBall* obj) {
+        double midx{ x + w / 2 }, midy{ y + h / 2 };
+        double objx{ obj->x() }, objy{ obj->y() }, objr{ obj->getRadius() };
+
+        bool up{ objy + objr > midy },
+            down{ objy - objr < midy },
+            left{ objx - objr < midx },
+            right{ objx + objr > midx };
+        if (up) {
+            if (left) return 0;
+            if (right) return 1;
+        }
+        if (down) {
+            if (left) return 2;
+            if (right) return 3;
+        }
+        return 0;
+    }
+
+    void insert(MyCollisionBall* obj) {
+        if (s[0]) {
+            int index{ getManagerIndex(obj) };
+            s[index]->insert(obj);
+            return;
+        }
+        manage.emplace_back(obj);
+        if (manage.size() > MAX_MANAGE && depth < MAX_DEPTH) {
+            divide();
+            for (auto i : manage) {
+                int index{ getManagerIndex(i) };
+                s[index]->insert(i);
+            }
+            manage.clear();
+        }
+    }
+
+    std::vector<MyCollisionBall*> getObjectsNear(MyCollisionBall* obj) {
+        int index{ getManagerIndex(obj) };
+        if (s[0]) {
+            return s[index]->getObjectsNear(obj);
+        }
+        return manage;
+    }
+};
+
+
 class MyGraphicsView : public QGraphicsView {
 
     Q_OBJECT
@@ -34,32 +132,42 @@ private:
     bool m_mouseEliminate{};
     bool m_mouseAddBall{};
 
-    int newBallVeloX{};
-    int newBallVeloY{};
-    int newBallMass{};
-    int newBallRadius{};
+    double newBallVeloX{};
+    double newBallVeloY{};
+    double newBallMass{};
+    double newBallRadius{};
 
     // Algorithms
 
-    std::vector<MyCollisionBall*> objBalls{};
-    int objCnt{};
+    static constexpr int MAX_BALLPOOL = 100000;
 
-    struct QuadtreeNode {
-        int ls, rs;
+    MyCollisionBall* ballPool{};
+    int ballPoolTop{};
+    MyCollisionBall** ballFreeStack{};
+    int ballFreeTop{};
 
-    };
+
+
+private:
 
 
 
 protected:
 
-    void addNewBall(double x, double y) {
-        MyCollisionBall* add{ new MyCollisionBall(x, y, newBallRadius) };
-        objBalls.emplace_back(add);
-        objCnt++;
-        add->setVeloV(newBallVeloX, newBallVeloY);
-        add->setMass(newBallMass);
-        this->scene()->addItem(add);
+    MyCollisionBall* addNewBall(double x, double y) {
+        MyCollisionBall* addr{};
+        if (ballFreeTop && ballFreeTop < MAX_BALLPOOL) {
+            addr = ballFreeStack[--ballFreeTop];
+            addr->~MyCollisionBall();
+        }
+        else if (ballPoolTop < MAX_BALLPOOL) {
+            addr = &(ballPool[ballPoolTop++]);
+        }
+        new(addr) MyCollisionBall{ x, y, newBallRadius };
+        addr->setVeloV(newBallVeloX, newBallVeloY);
+        addr->setMass(newBallMass);
+        this->scene()->addItem(addr);
+        return addr;
     }
 
 public:
@@ -84,15 +192,23 @@ public:
 
         // Optimization
         this->setViewportUpdateMode(QGraphicsView::ViewportUpdateMode::FullViewportUpdate);
+        ballPool = static_cast<MyCollisionBall*>(operator new[](sizeof(MyCollisionBall)* MAX_BALLPOOL, std::nothrow));
+        ballFreeStack = static_cast<MyCollisionBall**>(operator new[](sizeof(MyCollisionBall*)* MAX_BALLPOOL, std::nothrow));
 
         // Algorithms
-        objBalls.reserve(1024);
+        // nope
 
         // Connects
         connect(this->clock, &QTimer::timeout, this, &MyGraphicsView::updateAll);
 
     }
-    ~MyGraphicsView() = default;
+    ~MyGraphicsView() {
+        for (int i = 0; i < ballPoolTop; i++) {
+            ballPool[i].~MyCollisionBall();
+        }
+        operator delete[](ballPool, sizeof(MyCollisionBall)* MAX_BALLPOOL);
+        operator delete[](ballFreeStack, sizeof(MyCollisionBall*)* MAX_BALLPOOL);
+    }
 
     void setMouseBallTracking(bool status) { this->m_mouseBallTracking = status; }
     void setMouseEliminate(bool status) { this->m_mouseEliminate = status; }
@@ -105,6 +221,13 @@ public:
     void setNewBallVeloY(double value) { this->newBallVeloY = value; }
     void setNewBallMass(double value) { this->newBallMass = value; }
     void setNewBallRadius(double value) { this->newBallRadius = value; }
+
+    void initMouseBall() {
+        auto mouseBall = addNewBall(200, 200);
+        mouseBall->setIsMouse(true);
+        mouseBall->setRadius(16);
+    }
+
 
 protected:
     // Event handlers
@@ -156,14 +279,36 @@ protected:
 
 private slots:
     void updateAll() {
-        // not implement yet
+        // // // not implement yet
+        // auto items{ this->scene()->items() };
+        // for (int i = 0; i < items.size(); i++) {
+        //     auto cur{ static_cast<MyCollisionBall*>(items[i]) };
+        //     if (cur->getIsMouse()) continue;
+        //     cur->processBorderCollision(maxX, maxY);
+        //     cur->updatePosByVelo(this->clock->interval());
+        // }
+
+        QuadtreeNode qTree{ 0,0, (double)maxX, (double)maxY, 1 };
         auto items{ this->scene()->items() };
-        for (int i = 0; i < items.size(); i++) {
-            auto cur{ static_cast<MyCollisionBall*>(items[i]) };
-            if (cur->getIsMouse()) continue;
-            cur->processBorderCollision(maxX, maxY);
-            cur->updatePosByVelo(this->clock->interval());
+        for (auto i : items) {
+            auto cur{ static_cast<MyCollisionBall*>(i) };
+            qTree.insert(cur);
         }
+
+        for (auto i : items) {
+            auto cur{ static_cast<MyCollisionBall*>(i) };
+            if (!cur->getIsMouse()) {
+                std::vector<MyCollisionBall*> possible{ qTree.getObjectsNear(cur) };
+                for (auto other : possible) {
+                    if (cur == other) continue;
+                    bool ifCollide{ processCollision(*cur, *other) };
+                    collisionTimes += ifCollide;
+                }
+                cur->processBorderCollision(maxX, maxY);
+                cur->updatePosByVelo(this->clock->interval());
+            }
+        }
+
     }
 
 
@@ -171,13 +316,6 @@ public slots:
 
     void startAll() {
         qDebug() << "[VIEW] Simulation started";
-        // Init mouse ball
-        MyCollisionBall* a{ new MyCollisionBall{200,200,16} };
-        a->setIsMouse(true);
-        a->setVeloV(2000, 2000);
-        objBalls.emplace_back(a);
-        objCnt++;
-        this->scene()->addItem(objBalls[0]);
         this->clock->start();
         static_cast<QPushButton*>(sender())->setEnabled(false);
     }
