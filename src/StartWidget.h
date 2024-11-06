@@ -10,6 +10,11 @@
 class StartWidget : public QWidget {
     Q_OBJECT
 
+private:
+    // Member variables
+    MyGraphicsView* view{};
+    QGraphicsScene* scene{};
+
 public:
     // Public functions
     StartWidget(QWidget* parent = nullptr);
@@ -22,9 +27,6 @@ protected:
 private slots:
 
 
-private:
-    // Member variables
-    MyGraphicsView* view;
-    QGraphicsScene* scene;
+
 
 };

@@ -11,11 +11,11 @@ constexpr double MASS = 1.0;
 class MyCollisionBall : public QGraphicsEllipseItem {
 
 private:
-    double mass;
-    double radius;
-    Eigen::Vector2d veloV;
-    Eigen::Vector2d posV;
-    bool isMouse;
+    double mass{ 1 };
+    double radius{};
+    Eigen::Vector2d veloV{};
+    Eigen::Vector2d posV{};
+    bool isMouse{};
 
 
 public:
@@ -28,27 +28,28 @@ public:
         isMouse{ false } {
         this->setRect(-r, -r, 2 * r, 2 * r);
         this->setPos(x, y);
-    };
-    ~MyCollisionBall();
 
-    inline void setVeloV(const Eigen::Vector2d& velo) {
-        this->veloV = velo;
+    };
+    ~MyCollisionBall() = default;
+
+    void setVeloV(double x, double y) {
+        this->veloV = { x, y };
     }
-    inline void setPosV(const Eigen::Vector2d& pos) {
-        this->posV = pos;
-        this->setPos(pos[0], pos[1]);
+    void setPosV(double x, double y) {
+        this->posV = { x, y };
+        this->setPos(x, y);
     }
-    inline void setMass(double mass) {
+    void setMass(double mass) {
         this->mass = mass;
     }
-    inline void setIsMouse(bool status) {
+    void setIsMouse(bool status) {
         this->isMouse = status;
     }
 
     void paint(QPainter* painter, const QStyleOptionGraphicsItem* option, QWidget* widget) override {
         QPen outline{};
         QBrush inside{};
-        outline.setWidth(2);
+        outline.setWidth(5);
         inside.setStyle(Qt::BrushStyle::SolidPattern);
         if (isMouse) {
             // my mouse
@@ -105,12 +106,23 @@ public:
 
     // last invoke this
     inline void updatePosByVelo(int msec) {
-        this->posV += msec * this->veloV;
-        this->setPos(this->posV[0], this->posV[1]);
+        qDebug() << "updatePosByVelo";
+        // this->posV += msec / 1000.0 * this->veloV;
+        // this->setPos(this->posV[0], this->posV[1]);
     }
 
 protected:
 
+    // Event handlers
+    void mousePressEvent(QGraphicsSceneMouseEvent* event) override {
+        qDebug() << "Item mouse press";
+        event->ignore();
+    }
+
+    void mouseMoveEvent(QGraphicsSceneMouseEvent* event) override {
+        qDebug() << "Item mouse move";
+        event->ignore();
+    }
 
 
 private slots:
