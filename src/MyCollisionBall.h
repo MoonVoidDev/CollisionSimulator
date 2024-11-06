@@ -28,23 +28,19 @@ public:
         isMouse{ false } {
         this->setRect(-r, -r, 2 * r, 2 * r);
         this->setPos(x, y);
-
     };
     ~MyCollisionBall() = default;
 
-    void setVeloV(double x, double y) {
-        this->veloV = { x, y };
-    }
+    void setVeloV(double x, double y) { this->veloV = { x, y }; }
     void setPosV(double x, double y) {
         this->posV = { x, y };
         this->setPos(x, y);
     }
-    void setMass(double mass) {
-        this->mass = mass;
-    }
-    void setIsMouse(bool status) {
-        this->isMouse = status;
-    }
+    void setMass(double mass) { this->mass = mass; }
+    void setIsMouse(bool status) { this->isMouse = status; }
+
+    inline double getRadius() { return this->radius; }
+    inline bool getIsMouse() { return this->isMouse; }
 
     void paint(QPainter* painter, const QStyleOptionGraphicsItem* option, QWidget* widget) override {
         QPen outline{};
@@ -60,6 +56,7 @@ public:
             outline.setColor(QColor::fromRgb(198, 232, 249));
             inside.setColor(QColor::fromRgb(102, 204, 255));
         }
+        painter->setRenderHint(QPainter::RenderHint::Antialiasing);
         painter->setPen(outline);
         painter->setBrush(inside);
         painter->drawEllipse(this->rect());
@@ -67,9 +64,12 @@ public:
 
     // first invoke this
     inline friend bool processCollision(MyCollisionBall& a, MyCollisionBall& b) {
-        const Eigen::Vector2d disV = a.posV - b.posV;
-        if (disV.norm() <= a.radius + b.radius) {
-            Eigen::Vector2d n{ disV / disV.norm() };
+        const Eigen::Vector2d disV{ a.posV - b.posV };
+        double distance{ disV.norm() };
+        double radiusSum{ a.radius + b.radius };
+        if (distance <= radiusSum) {
+            // Speed simulation
+            Eigen::Vector2d n{ disV.normalized() };
             double relV{ (a.veloV - b.veloV).dot(n) };
             if (relV >= 0) return false;
             double massSum{ a.mass + b.mass };
@@ -79,9 +79,14 @@ public:
             Eigen::Vector2d bNewVeloV{
                 b.veloV + ((2 * a.mass) / massSum * relV * n)
             };
-
             a.veloV = aNewVeloV;
             b.veloV = bNewVeloV;
+
+            // Position fix 
+            double overlap{ radiusSum - disV.norm() };
+            a.posV += n * (overlap * (b.mass / massSum));
+            b.posV -= n * (overlap * (a.mass / massSum));
+
             return true;
         }
         return false;
@@ -93,12 +98,26 @@ public:
             // left and right 
             Eigen::Vector2d axis{ 1, 0 };
             this->veloV = this->veloV - 2 * (this->veloV.dot(axis)) * axis;
+
+            // position fix
+            this->posV[0] = std::max(this->posV[0], this->radius + 1);
+            this->posV[0] = std::min(this->posV[0], limitX - this->radius - 1);
+            this->posV[1] = std::max(this->posV[1], this->radius + 1);
+            this->posV[1] = std::min(this->posV[1], limitY - this->radius - 1);
+
             return true;
         }
         else if (this->posV[1] <= radius || this->posV[1] >= limitY - radius) {
             // up and down
             Eigen::Vector2d axis{ 0, 1 };
             this->veloV = this->veloV - 2 * (this->veloV.dot(axis)) * axis;
+
+            // position fix
+            this->posV[0] = std::max(this->posV[0], this->radius + 1);
+            this->posV[0] = std::min(this->posV[0], limitX - this->radius - 1);
+            this->posV[1] = std::max(this->posV[1], this->radius + 1);
+            this->posV[1] = std::min(this->posV[1], limitY - this->radius - 1);
+
             return true;
         }
         return false;
@@ -107,8 +126,9 @@ public:
     // last invoke this
     inline void updatePosByVelo(int msec) {
         qDebug() << "updatePosByVelo";
-        // this->posV += msec / 1000.0 * this->veloV;
-        // this->setPos(this->posV[0], this->posV[1]);
+        this->posV += msec / 1000.0 * this->veloV;
+        this->setPos(this->posV[0], this->posV[1]);
+        qDebug() << "Ball pos " << this->posV[0] << ' ' << this->posV[1];
     }
 
 protected:

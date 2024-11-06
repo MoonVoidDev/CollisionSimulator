@@ -38,7 +38,7 @@ StartWidget::StartWidget(QWidget* parent)
     // Main Widgets
     this->scene = new QGraphicsScene{ this };
     this->view = new MyGraphicsView{ this };
-    this->view->setScene(this->scene);
+    this->view->setScene(this->scene);  // Important
     renderLay->addWidget(this->view);
     this->scene->setSceneRect(0, 0, 1280, 960);
 
@@ -67,11 +67,11 @@ StartWidget::StartWidget(QWidget* parent)
     QLabel* veloXDisplay{ new QLabel{newballProps} };
     QSlider* veloY{ new QSlider{newballProps} };
     QLabel* veloYDisplay{ new QLabel{newballProps} };
+    QSlider* radiusSld{ new QSlider{newballProps} };
+    QLabel* radiusDisplay{ new QLabel{newballProps} };
     controlLay->addWidget(newballProps);
     newballProps->setLayout(nballLay);
 
-    massSld->setMinimum(1);
-    massSld->setMaximum(10);
     massSld->setOrientation(Qt::Orientation::Horizontal);
     nballLay->addWidget(new QLabel{ "Mass", newballProps }, 0, 0);
     nballLay->addWidget(massSld, 0, 1);
@@ -87,32 +87,57 @@ StartWidget::StartWidget(QWidget* parent)
     nballLay->addWidget(veloYDisplay, 2, 2);
     veloY->setOrientation(Qt::Orientation::Horizontal);
 
+    nballLay->addWidget(new QLabel{ "Radius", newballProps }, 3, 0);
+    nballLay->addWidget(radiusSld, 3, 1);
+    nballLay->addWidget(radiusDisplay, 3, 2);
+    radiusSld->setOrientation(Qt::Orientation::Horizontal);
+
     // Final init
+    massSld->setMinimum(1);
+    massSld->setMaximum(10);
+    this->view->setNewBallMass(1);
+    veloX->setMinimum(0);
+    veloX->setMaximum(1500);
+    this->view->setNewBallVeloX(0);
+    veloY->setMinimum(0);
+    veloY->setMaximum(1500);
+    this->view->setNewBallVeloY(0);
+    radiusSld->setMinimum(10);
+    radiusSld->setMaximum(50);
+    this->view->setNewBallRadius(10);
     massDisplay->setText(QString::number(massSld->value()));
     veloXDisplay->setText(QString::number(veloX->value()));
     veloYDisplay->setText(QString::number(veloY->value()));
-    veloX->setMinimum(0);
-    veloX->setMaximum(2000);
-    veloY->setMinimum(0);
-    veloY->setMaximum(2000);
+    radiusDisplay->setText(QString::number(radiusSld->value()));
 
     // Connects
     connect(startBtn, &QPushButton::clicked, this->view, &MyGraphicsView::startAll);
     connect(massSld, &QSlider::valueChanged, this,
-        [massDisplay](int val)-> void {
+        [=](int val)-> void {
             massDisplay->setText(QString::number(val));
+            this->view->setNewBallMass(val);
         }
     );
     connect(veloX, &QSlider::valueChanged, this,
-        [veloXDisplay](int val)-> void {
+        [=](int val)-> void {
             veloXDisplay->setText(QString::number(val));
+            this->view->setNewBallVeloX(val);
         }
     );
     connect(veloY, &QSlider::valueChanged, this,
-        [veloYDisplay](int val)-> void {
+        [=](int val)-> void {
             veloYDisplay->setText(QString::number(val));
+            this->view->setNewBallVeloY(val);
         }
     );
+    connect(radiusSld, &QSlider::valueChanged, this,
+        [=](int val)->void {
+            radiusDisplay->setText(QString::number(val));
+            this->view->setNewBallRadius(val);
+        }
+    );
+
+
 
     connect(mouseBallTrackingChbox, &QCheckBox::toggled, this,
         [this](bool checked)->void {

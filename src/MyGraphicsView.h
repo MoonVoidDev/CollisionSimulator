@@ -6,6 +6,8 @@
 #include <QMouseEvent>
 #include <QPaintEvent>
 #include <QDebug>
+#include <QPushButton>
+#include <cmath>
 
 #include "MyCollisionBall.h"
 
@@ -28,7 +30,6 @@ private:
     QTimer* clock{};
 
     // Misc
-    int mouseIndex{ 0 };
     bool m_mouseBallTracking{};
     bool m_mouseEliminate{};
     bool m_mouseAddBall{};
@@ -36,6 +37,7 @@ private:
     int newBallVeloX{};
     int newBallVeloY{};
     int newBallMass{};
+    int newBallRadius{};
 
     // Algorithms
 
@@ -51,8 +53,13 @@ private:
 
 protected:
 
-    void addNewBall() {
-
+    void addNewBall(double x, double y) {
+        MyCollisionBall* add{ new MyCollisionBall(x, y, newBallRadius) };
+        objBalls.emplace_back(add);
+        objCnt++;
+        add->setVeloV(newBallVeloX, newBallVeloY);
+        add->setMass(newBallMass);
+        this->scene()->addItem(add);
     }
 
 public:
@@ -66,7 +73,6 @@ public:
         this->setSceneRect(0, 0, 1280, 960);
 
         // Misc
-        this->mouseIndex = 0;
         maxX = this->width();
         maxY = this->height();
         collisionTimes = 0;
@@ -80,12 +86,7 @@ public:
         this->setViewportUpdateMode(QGraphicsView::ViewportUpdateMode::FullViewportUpdate);
 
         // Algorithms
-        objBalls.resize(1024);
-        MyCollisionBall* a{ new MyCollisionBall{200,200,30} };
-        objBalls[0] = a;
-        a->setIsMouse(true);
-        a->setVeloV(2000, 2000);
-        objCnt++;
+        objBalls.reserve(1024);
 
         // Connects
         connect(this->clock, &QTimer::timeout, this, &MyGraphicsView::updateAll);
@@ -100,12 +101,18 @@ public:
     inline bool mouseEliminate(bool status) { return this->m_mouseEliminate; }
     inline bool mouseAddBall(bool status) { return this->m_mouseAddBall; }
 
+    void setNewBallVeloX(double value) { this->newBallVeloX = value; }
+    void setNewBallVeloY(double value) { this->newBallVeloY = value; }
+    void setNewBallMass(double value) { this->newBallMass = value; }
+    void setNewBallRadius(double value) { this->newBallRadius = value; }
+
 protected:
     // Event handlers
     void paintEvent(QPaintEvent* event) override {
         QGraphicsView::paintEvent(event);
         QPainter painter{ this->viewport() };
         QPen outline{};
+        painter.setRenderHint(QPainter::RenderHint::Antialiasing);
         outline.setColor(Qt::white);
         outline.setWidth(5);
         painter.setPen(outline);
@@ -116,20 +123,18 @@ protected:
 
     void mousePressEvent(QMouseEvent* event) override {
         qDebug() << "[VIEW] mousePress";
-        if (event->buttons() & Qt::MouseButton::LeftButton) {
-            if (this->m_mouseBallTracking) {
-                const auto subItems{ this->scene()->items() };
-                if (subItems.size() == 0) return;
-                const auto toScene{ mapToScene(event->pos()) };
-                static_cast<MyCollisionBall*>(subItems[0])->setPosV(toScene.x(), toScene.y());
-            }
-        }
-        else if (event->button() == Qt::MouseButton::RightButton) {
+        if (event->buttons() & Qt::MouseButton::RightButton) {
             if (this->m_mouseAddBall) {
-                this->addNewBall();
+                const auto mousePos{ event->position() };
+                const auto toScene{
+                    mapToScene(
+                        std::min(std::max(mousePos.x(), (double)newBallRadius), maxX - (double)newBallRadius),
+                    std::min(std::max(mousePos.y(), (double)newBallRadius), maxY - (double)newBallRadius)
+                    )
+                };
+                this->addNewBall(toScene.x(), toScene.y());
             }
         }
-        event->accept();
     }
 
     void mouseMoveEvent(QMouseEvent* event) override {
@@ -137,25 +142,45 @@ protected:
         if (this->m_mouseBallTracking && (event->buttons() & Qt::MouseButton::LeftButton)) {
             const auto subItems{ this->scene()->items() };
             if (subItems.size() == 0) return;
-            const auto toScene{ mapToScene(event->pos()) };
-            static_cast<MyCollisionBall*>(subItems[0])->setPosV(toScene.x(), toScene.y());
+            const auto mouseBall{ static_cast<MyCollisionBall*>(subItems.back()) };
+            const auto mousePos{ event->position() };
+            const auto toScene{
+                mapToScene(
+                    std::min(std::max(mousePos.x(), mouseBall->getRadius()), maxX - mouseBall->getRadius()),
+                std::min(std::max(mousePos.y(), mouseBall->getRadius()), maxY - mouseBall->getRadius())
+                )
+            };
+            mouseBall->setPosV(toScene.x(), toScene.y());
         }
-        event->accept();
     }
 
 private slots:
     void updateAll() {
         // not implement yet
+        auto items{ this->scene()->items() };
+        for (int i = 0; i < items.size(); i++) {
+            auto cur{ static_cast<MyCollisionBall*>(items[i]) };
+            if (cur->getIsMouse()) continue;
+            cur->processBorderCollision(maxX, maxY);
+            cur->updatePosByVelo(this->clock->interval());
+        }
     }
 
 
 public slots:
 
     void startAll() {
-        qDebug() << "test";
+        qDebug() << "[VIEW] Simulation started";
+        // Init mouse ball
+        MyCollisionBall* a{ new MyCollisionBall{200,200,16} };
+        a->setIsMouse(true);
+        a->setVeloV(2000, 2000);
+        objBalls.emplace_back(a);
+        objCnt++;
         this->scene()->addItem(objBalls[0]);
+        this->clock->start();
+        static_cast<QPushButton*>(sender())->setEnabled(false);
     }
-
 
 };
 
