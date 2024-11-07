@@ -16,6 +16,7 @@ private:
     Eigen::Vector2d veloV{};
     Eigen::Vector2d posV{};
     bool isMouse{};
+    bool deleteLater{};
 
     int poolIndex{};  // deprecated
 
@@ -38,16 +39,21 @@ public:
         this->posV = { x, y };
         this->setPos(x, y);
     }
+
     void setMass(double mass) { this->mass = mass; }
     void setRadius(double radius) { this->radius = radius; }
     void setIsMouse(bool status) { this->isMouse = status; }
     inline void setPoolIndex(int i) { this->poolIndex = i; }
+    inline void setDeleteLater(bool status) { this->deleteLater = status; }
 
     inline double getRadius() { return this->radius; }
     inline bool getIsMouse() { return this->isMouse; }
     inline int getPoolIndex() { return this->poolIndex; }
     inline double getX() { return this->posV[0]; }
     inline double getY() { return this->posV[1]; }
+    inline Eigen::Vector2d getPosV() { return this->posV; }
+    inline Eigen::Vector2d getVeloV() { return this->veloV; }
+    inline bool getDeleteLater() { return this->deleteLater; }
 
     void paint(QPainter* painter, const QStyleOptionGraphicsItem* option, QWidget* widget) override {
         QPen outline{};
@@ -69,9 +75,19 @@ public:
         painter->drawEllipse(this->rect());
     }
 
+    inline friend bool existCollision(MyCollisionBall& a, MyCollisionBall& b) {
+        Eigen::Vector2d disV{ a.posV - b.posV };
+        double distance{ disV.norm() };
+        double radiusSum{ a.radius + b.radius };
+        if (distance <= radiusSum) {
+            return true;
+        }
+        return false;
+    }
+
     // first invoke this
     inline friend bool processCollision(MyCollisionBall& a, MyCollisionBall& b) {
-        const Eigen::Vector2d disV{ a.posV - b.posV };
+        Eigen::Vector2d disV{ a.posV - b.posV };
         double distance{ disV.norm() };
         double radiusSum{ a.radius + b.radius };
         if (distance <= radiusSum) {
@@ -132,22 +148,22 @@ public:
 
     // last invoke this
     inline void updatePosByVelo(int msec) {
-        qDebug() << "updatePosByVelo";
+        // qDebug() << "updatePosByVelo";
         this->posV += msec / 1000.0 * this->veloV;
         this->setPos(this->posV[0], this->posV[1]);
-        qDebug() << "Ball pos " << this->posV[0] << ' ' << this->posV[1];
+        // qDebug() << "Ball pos " << this->posV[0] << ' ' << this->posV[1];
     }
 
 protected:
 
     // Event handlers
     void mousePressEvent(QGraphicsSceneMouseEvent* event) override {
-        qDebug() << "Item mouse press";
+        // qDebug() << "Item mouse press";
         event->ignore();
     }
 
     void mouseMoveEvent(QGraphicsSceneMouseEvent* event) override {
-        qDebug() << "Item mouse move";
+        // qDebug() << "Item mouse move";
         event->ignore();
     }
 

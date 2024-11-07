@@ -14,13 +14,14 @@
 
 #include <QSlider>
 #include <QLabel>
+#include <QSpinBox>
 
 
 StartWidget::StartWidget(QWidget* parent)
     : QWidget(parent) {
 
     // Start init
-    this->setWindowTitle("Collision Simulator 241106");
+    this->setWindowTitle("Collision Simulator 241107");
 
     QHBoxLayout* mainLay{ new QHBoxLayout{this} };
     QGroupBox* renderBox{ new QGroupBox{"Render", this} };
@@ -92,6 +93,33 @@ StartWidget::StartWidget(QWidget* parent)
     nballLay->addWidget(radiusDisplay, 3, 2);
     radiusSld->setOrientation(Qt::Orientation::Horizontal);
 
+
+    // Misc
+    QGroupBox* miscBox{ new QGroupBox{controlBox} };
+    QVBoxLayout* miscLay{ new QVBoxLayout{miscBox} };
+    QSpinBox* batchSpin{ new QSpinBox{miscBox} };
+    QPushButton* batchAddBtn{ new QPushButton{"BatchAdd", miscBox} };
+    QPushButton* batchDeleteBtn{ new QPushButton{"BatchDelete", miscBox} };
+    controlLay->addWidget(miscBox);
+    miscBox->setLayout(miscLay);
+    miscBox->setTitle("Misc");
+    miscLay->addWidget(batchSpin);
+    miscLay->addWidget(batchAddBtn);
+    miscLay->addWidget(batchDeleteBtn);
+    batchSpin->setSingleStep(20);
+
+    // Algo switcher
+    QGroupBox* algoSwicthBox{ new QGroupBox{controlBox} };
+    QHBoxLayout* algoSwitchLay{ new QHBoxLayout{algoSwicthBox} };
+    QRadioButton* brutalRadioBtn{ new QRadioButton{"Brutal", algoSwicthBox} };
+    QRadioButton* quadtreeRadioBtn{ new QRadioButton{"Quadtree", algoSwicthBox} };
+    controlLay->addWidget(algoSwicthBox);
+    algoSwicthBox->setLayout(algoSwitchLay);
+    algoSwicthBox->setTitle("AlgoSwitch");
+    algoSwitchLay->addWidget(brutalRadioBtn);
+    algoSwitchLay->addWidget(quadtreeRadioBtn);
+
+
     // Final init
     massSld->setMinimum(1);
     massSld->setMaximum(25);
@@ -155,6 +183,37 @@ StartWidget::StartWidget(QWidget* parent)
         }
     );
 
+    connect(batchAddBtn, &QPushButton::clicked, this,
+        [this, batchSpin]() -> void {
+            this->view->batchAdd(batchSpin->value());
+        }
+    );
+
+    connect(batchDeleteBtn, &QPushButton::clicked, this,
+        [this, batchSpin]()->void {
+            this->view->batchDelete(batchSpin->value());
+        }
+    );
+
+    connect(brutalRadioBtn, &QRadioButton::toggled, this,
+        [this]() -> void {
+            this->view->useQuadtreeAlgo(false);
+        }
+    );
+
+    connect(quadtreeRadioBtn, &QRadioButton::toggled, this,
+        [this]()->void {
+            this->view->useQuadtreeAlgo(true);
+        }
+    );
+
+    // default configs
+    mouseBallTrackingChbox->setChecked(true);
+    mouseAddBallChbox->setChecked(true);
+
+    quadtreeRadioBtn->setChecked(true);
+
+    // other
     this->view->initMouseBall();
 
 }
