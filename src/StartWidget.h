@@ -1,32 +1,26 @@
 #pragma once
 
 #include "MyGraphicsView.h"
-#include "MyCollisionBall.h"
 
-#include <QWidget>
-#include <QGraphicsView>
 #include <QGraphicsScene>
+#include <QGraphicsView>
+#include <QWidget>
 
 class StartWidget : public QWidget {
-    Q_OBJECT
+  Q_OBJECT
 
 private:
-    // Member variables
-    MyGraphicsView* view{};
-    QGraphicsScene* scene{};
+  // Member variables
+  MyGraphicsView *view{};
+  QGraphicsScene *scene{};
 
 public:
-    // Public functions
-    StartWidget(QWidget* parent = nullptr);
-    ~StartWidget();
+  // Public functions
+  StartWidget(QWidget *parent = nullptr);
+  ~StartWidget();
 
 protected:
-    // Events handlers
-
+  // Events handlers
 
 private slots:
-
-
-
-
 };
